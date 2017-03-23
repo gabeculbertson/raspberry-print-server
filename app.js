@@ -5,6 +5,8 @@ var fs = require('fs');
 var ejs = require('ejs');
 var bodyParser = require('body-parser');
 var pdf = require('html-pdf');
+var needle = require('needle');
+var multer = require('multer');
 
 var exec = require('child_process').exec;
 var cmd = 'lpr sample.pdf';
@@ -24,19 +26,26 @@ app.get('/print', function(req, res){
 	res.send(html);
 });
 
-app.post('/print', function(req, res){
-	console.log(req.body.text);
-	var html = ejs.render(fs.readFileSync('sample.html', 'utf8'), { text: req.body.text });
-	pdf.create(html, options).toFile('./sample.pdf', function(err, res) {
-		if (err) return console.log(err);
-		console.log(res); // { filename: '/app/businesscard.pdf' } 
-		exec(cmd, function(error, stdout, stderr) {
+app.post('/print_pdf', multer({
+    dest: 'upload/',
+    rename: function(fieldname, filename) {
+        return "upload.pdf";
+    },
+    onFileUploadStart: function(file) {
+        console.log(file.originalname + ' is starting ...')
+    },
+    onFileUploadComplete: function(file) {
+        console.log(file.fieldname + ' uploaded to  ' + file.path);
+        exec(cmd, function(error, stdout, stderr) {
 		 	console.log(error);
 		 	console.log(stdout);
 		 	console.log(stderr);
 		});
-	});
+    }
+}).single('pdf'), function(req, res){
+	res.send('done');
 });
+
 
 var httpServer = http.createServer(app);
 httpServer.listen(80);
